@@ -4,7 +4,7 @@ import java.util.List;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
-import io.openliberty.guides.domains.models.Vehicle;
+import io.openliberty.guides.app.models.Vehicle;
 
 import jakarta.enterprise.context.RequestScoped;
 
@@ -22,7 +22,7 @@ public class VehicleDao {
         return em.find(Vehicle.class, licenseNumber);
     }
     
-    public void updateVehicle(Vehice vehicle) {
+    public void updateVehicle(Vehicle vehicle) {
         em.merge(vehicle);
     }
 
@@ -32,10 +32,5 @@ public class VehicleDao {
 
     public List<Vehicle> readAllVehicles() {
         return em.createNamedQuery("Vehicles.findAll", Vehicle.class).getResultList();
-    }
-
-    public List<Vehicle> findVehicle(String licenseNumber) {
-        return em.createNamedQuery("Vehicles.findVehicle", Vehicle.class)
-            .setParameter("licenseNumber", licenseNumber);
     }
 }

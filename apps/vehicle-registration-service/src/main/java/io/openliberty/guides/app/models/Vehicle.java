@@ -1,4 +1,4 @@
-package io.openliberty.guides.domains.models;
+package io.openliberty.guides.app.models;
 
 import java.util.Objects;
 import java.io.Serializable;
@@ -12,7 +12,7 @@ import jakarta.persistence.GenerationType;
 
 @Entity
 @Table(name = "Vehicles")
-@NamedQuery(name = "Vehicles.findAll", query = "SELECT e FROM Vehicles e")
+@NamedQuery(name = "Vehicles.findAll", query = "SELECT e FROM Vehicle e")
 public class Vehicle implements Serializable {
 
     private static final long serialVersionUID = 1L;
