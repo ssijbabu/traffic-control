@@ -13,5 +13,6 @@
     <modules>
         <module>domains</module>
         <module>vehicle-registration-service</module>
+        <module>traffic-control-service</module>
     </modules>
 </project>

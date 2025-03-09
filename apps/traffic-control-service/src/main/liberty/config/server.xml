@@ -1,0 +1,42 @@
+<server description="Traffic Control Server">
+  <!-- tag::featureManager[] -->
+  <featureManager>
+        <platform>jakartaee-10.0</platform>
+        <platform>microprofile-7.0</platform>
+        <feature>restfulWS</feature>
+        <feature>jsonb</feature>
+        <feature>jsonp</feature>
+        <feature>cdi</feature>
+        <feature>persistence</feature>
+        <feature>mpOpenAPI</feature>
+        <feature>mpConfig</feature>
+        <feature>mpReactiveMessaging</feature>
+  </featureManager>
+  <!-- end::featureManager[] -->
+
+  <!-- tag::httpEndpoint[] -->
+  <httpEndpoint httpPort="${http.port}" httpsPort="${https.port}"
+                id="defaultHttpEndpoint" host="*" />
+  <!-- end::httpEndpoint[] -->
+  
+  <!-- tag::webApplication[] -->
+  <webApplication location="traffic-control-service.war" contextRoot="/"/>
+  <!-- end::webApplication[] -->
+
+  <!-- Derby Library Configuration -->
+  <!-- tag::shared-dir[] -->
+  <library id="derbyJDBCLib">
+    <fileset dir="${shared.resource.dir}/" includes="derby*.jar" />
+  </library>
+  <!-- end::shared-dir[] -->
+
+  <!-- Datasource Configuration -->
+  <!-- tag::data-source[] -->
+  <dataSource id="tcjpadatasource" jndiName="jdbc/tcjpadatasource">
+    <jdbcDriver libraryRef="derbyJDBCLib" />
+    <properties.derby.embedded databaseName="TrafficControlDB" createDatabase="create" />
+  </dataSource>
+  <!-- end::data-source[] -->
+
+  <logging consoleLogLevel="INFO"/>
+</server>
