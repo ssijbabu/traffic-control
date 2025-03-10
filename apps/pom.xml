@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
   
     <modules>
-        <module>domains</module>
+        <module>fine-collection-service</module>
         <module>vehicle-registration-service</module>
         <module>traffic-control-service</module>
     </modules>
