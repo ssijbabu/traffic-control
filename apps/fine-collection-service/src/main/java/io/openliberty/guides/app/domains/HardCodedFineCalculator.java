@@ -1,5 +1,8 @@
 package io.openliberty.guides.app.domains;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
 public class HardCodedFineCalculator implements FineCalculator
 {
     public int CalculateFine(int violationInKmh)

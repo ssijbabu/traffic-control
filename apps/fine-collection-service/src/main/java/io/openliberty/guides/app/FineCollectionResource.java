@@ -1,6 +1,6 @@
 package io.openliberty.guides.app;
 
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import java.text.MessageFormat;
@@ -14,7 +14,7 @@ import io.openliberty.guides.app.models.SpeedingViolation;
 import io.openliberty.guides.app.models.Vehicle;
 import jakarta.ws.rs.Path;
 
-@RequestScoped
+@ApplicationScoped
 @Path("/fines") // Added base path.
 public class FineCollectionResource {
 

@@ -1,4 +1,4 @@
-package io.openliberty.guides.rest;
+package io.openliberty.guides.app;
 
 import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.ApplicationPath;

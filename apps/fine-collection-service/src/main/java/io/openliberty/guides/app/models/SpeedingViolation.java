@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
+import jakarta.json.bind.annotation.JsonbProperty;
+import jakarta.json.bind.annotation.JsonbDateFormat;
 
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serializer;
@@ -19,6 +21,7 @@ public class SpeedingViolation {
 
     private int violationInKmh;
 
+    @JsonbDateFormat("yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timeStamp;
 
     // Constructors

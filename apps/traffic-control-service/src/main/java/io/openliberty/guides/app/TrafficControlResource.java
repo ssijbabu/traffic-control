@@ -23,6 +23,7 @@ import io.openliberty.guides.app.models.VehicleState;
 import io.openliberty.guides.app.emitter.SpeedingViolationEmitter;
 
 @RequestScoped
+@Path("/traffic-control")
 public class TrafficControlResource {
 
     private static Logger logger = Logger.getLogger(TrafficControlResource.class.getName());
@@ -63,16 +64,16 @@ public class TrafficControlResource {
     @Transactional
     public Response vehicleExited(VehicleRegistered vehicleRegistered) {
         try {
+            logger.info(MessageFormat.format("EXIT detected in lane {0} at {1} of vehicle with license-number {2}.",
+                vehicleRegistered.getLane(), vehicleRegistered.getTimeStamp(), vehicleRegistered.getLicenseNumber()));
+
             String licenseNumber =  vehicleRegistered.getLicenseNumber();
 
             VehicleState vehicleState = vehicleStateDAO.readVehicleState(licenseNumber);
             if(vehicleState == null) {
-                Response.status(Response.Status.NOT_FOUND).entity("Vehicle with licenseNumber " + licenseNumber + " not found").build();
+                return Response.status(Response.Status.NOT_FOUND).entity("Vehicle with licenseNumber " + licenseNumber + " not found").build();
             }
-
-            logger.info(MessageFormat.format("EXIT detected in lane {0} at {1} of vehicle with license-number {2}.",
-                vehicleRegistered.getLane(), vehicleRegistered.getTimeStamp(), vehicleRegistered.getLicenseNumber()));
-
+            
             vehicleState.setExitTimeStamp(vehicleRegistered.getTimeStamp());
             vehicleStateDAO.updateVehicleState(vehicleState);
 
