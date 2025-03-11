@@ -1,49 +1,65 @@
 services:
   zookeeper:
-    restart: always
-    image: docker.io/bitnami/zookeeper:3.8
-    ports:
-      - "2181:2181"
-    volumes:
-      - "zookeeper-volume:/bitnami"
+    image: confluentinc/cp-zookeeper:latest
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 2181:2181
+    
   kafka:
-    restart: always
-    image: docker.io/bitnami/kafka:3.3
-    ports:
-      - "9093:9093"
-    volumes:
-      - "kafka-volume:/bitnami"
-    environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+    image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
+    ports:
+      - 9092:9092
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   vehicle-registration-service:
     build:
-      context: apps/vehicle-registration-service      
+      context: apps/vehicle-registration-service     
+    environment:
+      - http.port=9080
+      - https.port=9043 
     ports:
       - 9080:9080
+      - 9043:9043
 
   traffic-control-service:
     build:
-      context: apps/traffic-control-service      
+      context: apps/traffic-control-service   
+    environment:
+      - http.port=9081
+      - https.port=9044   
+      - KAFKA_CONNECT=kafka:9092
     ports:
       - 9081:9081
+      - 9044:9044  
+    depends_on:
+      - kafka    
 
   fine-collection-service:
     build:
       context: apps/fine-collection-service      
     ports:
       - 9082:9082
-      
+      - 9045:9045
+    environment:
+      - http.port=9082
+      - https.port=9045   
+      - KAFKA_CONNECT=kafka:9092
+      - VEHICLE_REGISTRATION_CONNECT=vehicle-registration-service:9080
+    depends_on:
+      - kafka
+      - vehicle-registration-service
+
 volumes:
   kafka-volume:
   zookeeper-volume:
