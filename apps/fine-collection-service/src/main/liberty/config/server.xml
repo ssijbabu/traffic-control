@@ -11,6 +11,8 @@
         <feature>mpReactiveMessaging</feature>
         <feature>mpConfig</feature>
         <feature>mpRestClient</feature>
+        <feature>mpTelemetry</feature>
+        <feature>mpMetrics</feature>
   </featureManager>
   <!-- end::featureManager[] -->
 

@@ -10,6 +10,8 @@
         <feature>persistence</feature>
         <feature>mpOpenAPI</feature>
         <feature>mpConfig</feature>
+        <feature>mpTelemetry</feature>
+        <feature>mpMetrics</feature>
   </featureManager>
   <!-- end::featureManager[] -->
 
@@ -36,4 +38,6 @@
     <properties.derby.embedded databaseName="VehicleRegistrationDB" createDatabase="create" />
   </dataSource>
   <!-- end::data-source[] -->
+
+  <logging consoleLogLevel="INFO"/>
 </server>

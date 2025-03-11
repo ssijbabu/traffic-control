@@ -1,4 +1,102 @@
 services:
+
+  setup:
+    profiles:
+      - setup
+    build:
+      context: elk-stack/setup/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    init: true
+    volumes:
+      - ./elk-stack/setup/entrypoint.sh:/entrypoint.sh:ro,Z
+      - ./elk-stack/setup/lib.sh:/lib.sh:ro,Z
+      - ./elk-stack/setup/roles:/roles:ro,Z
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
+      LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+      METRICBEAT_INTERNAL_PASSWORD: ${METRICBEAT_INTERNAL_PASSWORD:-}
+      FILEBEAT_INTERNAL_PASSWORD: ${FILEBEAT_INTERNAL_PASSWORD:-}
+      HEARTBEAT_INTERNAL_PASSWORD: ${HEARTBEAT_INTERNAL_PASSWORD:-}
+      MONITORING_INTERNAL_PASSWORD: ${MONITORING_INTERNAL_PASSWORD:-}
+      BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    build:
+      context: elk-stack/elasticsearch/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./elk-stack/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - elasticsearch:/usr/share/elasticsearch/data:Z
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      node.name: elasticsearch
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
+      discovery.type: single-node
+    restart: unless-stopped
+
+  logstash:
+    build:
+      context: elk-stack/logstash/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./elk-stack/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ./elk-stack/logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
+    ports:
+      - 5044:5044
+      - 50000:50000/tcp
+      - 50000:50000/udp
+      - 9600:9600
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+      LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  kibana:
+    build:
+      context: elk-stack/kibana/
+      args:
+        ELASTIC_VERSION: ${ELASTIC_VERSION}
+    volumes:
+      - ./elk-stack/kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    ports:
+      - 5601:5601
+    environment:
+      KIBANA_SYSTEM_PASSWORD: ${KIBANA_SYSTEM_PASSWORD:-}
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:${ELASTIC_VERSION}
+    depends_on:
+      - elasticsearch
+      - kibana
+    cap_add: [ "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID" ]
+    cap_drop: [ "ALL" ]
+    ports:
+      - 8200:8200
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana:5601
+        -E output.elasticsearch.hosts=["elasticsearch:9200"]
+        -E output.elasticsearch.username="elastic"
+        -E output.elasticsearch.password=${ELASTIC_PASSWORD:-}
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -6,7 +104,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 2181:2181
-    
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -21,41 +119,67 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  
+  jaeger:
+    image: jaegertracing/jaeger:latest
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - LOG_LEVEL=debug
+
+  hotrod:
+    image: jaegertracing/example-hotrod:latest
+    ports:
+      - "8080:8080"
+      - "8083:8083"
+    command: ["all"]
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://apm-server:4318
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=hotrod,service.version=1.1,deployment.environment=production
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+    depends_on:
+      - jaeger
 
   vehicle-registration-service:
     build:
-      context: apps/vehicle-registration-service     
+      context: apps/vehicle-registration-service
     environment:
       - http.port=9080
-      - https.port=9043 
+      - https.port=9043
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
     ports:
       - 9080:9080
       - 9043:9043
 
   traffic-control-service:
     build:
-      context: apps/traffic-control-service   
+      context: apps/traffic-control-service
     environment:
       - http.port=9081
-      - https.port=9044   
+      - https.port=9044
       - KAFKA_CONNECT=kafka:9092
+      - APM_SERVER_CONNECT=apm-server:8200
     ports:
       - 9081:9081
-      - 9044:9044  
+      - 9044:9044
     depends_on:
-      - kafka    
+      - kafka
 
   fine-collection-service:
     build:
-      context: apps/fine-collection-service      
+      context: apps/fine-collection-service
     ports:
       - 9082:9082
       - 9045:9045
     environment:
       - http.port=9082
-      - https.port=9045   
+      - https.port=9045
       - KAFKA_CONNECT=kafka:9092
       - VEHICLE_REGISTRATION_CONNECT=vehicle-registration-service:9080
+      - APM_SERVER_CONNECT=apm-server:8200
     depends_on:
       - kafka
       - vehicle-registration-service
@@ -63,4 +187,5 @@ services:
 volumes:
   kafka-volume:
   zookeeper-volume:
-  
+  elasticsearch:
+  kafka:

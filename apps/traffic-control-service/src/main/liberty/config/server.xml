@@ -11,6 +11,8 @@
         <feature>mpOpenAPI</feature>
         <feature>mpConfig</feature>
         <feature>mpReactiveMessaging</feature>
+        <feature>mpTelemetry</feature>
+        <feature>mpMetrics</feature>
   </featureManager>
   <!-- end::featureManager[] -->
 
