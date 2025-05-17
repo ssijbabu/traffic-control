@@ -1,0 +1,85 @@
+image: acrazurdvswc001j2nqi.azurecr.io/logstash/logstash-shb
+imageTag: "1580733" 
+imagePullPolicy: IfNotPresent 
+
+labels:
+  azure.workload.identity/use: "true"
+
+rbac:
+  create: true
+  serviceAccountName: mi-azur-dv-swc-209-logstash # Name of the service account to use for RBAC
+  serviceAccountAnnotations:
+    azure.workload.identity/client-id: "a2f3e4b5-6c7d-8e9a-a0b1-c2d3e4f5g6h7" # Client ID of the Azure AD application
+  
+extraEnvs:
+  - name: AZURE_HTTP_LOG_DETAIL_LEVEL
+    value: BODY_AND_HEADERS
+  - name: AZURE_LOG_LEVEL
+    value: VERBOSE
+
+logstashJavaOpts: "-Xmx1g -Xms1g -Djava.net.preferIPv4Stack=true"
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsUser: 1000
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false 
+
+logstashConfig:
+  logstash.yml: |
+    http.host: 0.0.0.0
+    xpack.monitoring.enabled: false
+
+logstashPipeline:
+  logstash.conf: |
+    input {
+      generator {
+        lines => [ "Hello from AKS!" ]
+        count => 50
+      }
+      beats {
+        port => 5044
+      }
+      tcp {
+        port => 5050
+        codec => json
+      }
+    }
+
+    filter {
+    }
+
+    output {
+      stdout  {
+        codec => json_lines
+      }
+      if [@metadata][beat] == "filebeat" {
+        kafka {
+          client_id => "logstash-c2e5b4fd783d"
+          codec => json
+          enable_metric => "false"
+          topic_id => "shb-custom-data_analytical_services-test"
+          bootstrap_servers => "evhn-evnt-dv-swc-001.servicebus.windows.net:9093"
+          max_request_size => 10240000
+
+          security_protocol => "SASL_SSL"
+          sasl_mechanism => "OAUTHBEARER"
+          sasl_login_callback_handler_class => "io.conduktor.kafka.security.oauthbearer.azure.AzureManagedIdentityCallbackHandler"
+          sasl_jaas_config => "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required azureAuthType='workload' scope='https://evhn-evnt-dv-swc-001.servicebus.windows.net/.default';"
+        }
+      } 
+    }
+
+service:
+  type: ClusterIP
+  ports:
+    - name: beats
+      port: 5044
+      protocol: TCP
+      targetPort: 5044
+    - name: http # Note: The logstash.yml sets http.host, the chart's service might expose the HTTP port, often 9600 or similar by default. Adjusted to 8080 as per your config, but verify chart expectations.
+      port: 8080
+      protocol: TCP
+      targetPort: 8080 # This might need to match the actual HTTP port Logstash listens on
+

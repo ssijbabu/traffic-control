@@ -1,0 +1,21 @@
+image: "localhost:5001/beats/filebeat"
+
+daemonset:
+  filebeatConfig:
+    filebeat.yml: |
+      filebeat.autodiscover:
+        providers:
+          - type: kubernetes
+            node: ${NODE_NAME}
+            hints.enabled: true
+            hints.default_config:
+              type: container
+              paths:
+                - /var/log/containers/*${data.kubernetes.container.id}.log
+
+        processors:
+          - add_kubernetes_metadata:
+          - add_host_metadata:
+
+        output.logstash:
+            hosts: ["logstash-logstash.logging:5044"]
